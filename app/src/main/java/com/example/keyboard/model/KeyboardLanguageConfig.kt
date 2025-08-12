@@ -52,5 +52,16 @@ val Russian = KeyboardLanguageConfig(
 )
 
 val BottomRowKeys = listOf(
-    Key.NumberToggle, Key.LanguageToggle, Key.Space ,Key.Enter
+    Key.NumberToggle, Key.LanguageToggle, Key.EmojiToggle ,Key.Space ,Key.Enter
+)
+
+val EmojiBottomRowKeys = listOf(
+    Key.NumberToggle, Key.Space, Key.Delete
+)
+
+val symbolKeys = listOf(
+    listOf('1','2','3','4','5','6','7','8','9','0').map { Key.Character(it.toString()) },
+    listOf('-','/',':', ';','(', ')', '$', '&', '@', '"').map { Key.Character(it.toString()) },
+    listOf('.', ',', '?', '!', "'", '-')
+        .map { Key.Character(it.toString()) } + listOf(Key.Delete)
 )

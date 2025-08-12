@@ -97,7 +97,7 @@ class KeyboardService : InputMethodService(), LifecycleOwner, SavedStateRegistry
 
     private fun handleDelete() {
         val inputConnection = currentInputConnection ?: return
-        inputConnection.deleteSurroundingText(1, 0)
+        inputConnection.deleteSurroundingTextInCodePoints(1,0)
     }
 
     private fun handleShiftPress() {

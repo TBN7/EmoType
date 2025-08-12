@@ -54,6 +54,8 @@ dependencies {
     implementation(libs.savedstate.ktx)
     implementation(libs.lifecycle.service)
 
+    implementation(libs.emoji.picker)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
