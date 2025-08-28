@@ -1,19 +1,20 @@
 package com.example.keyboard.emotiondetection
 
+
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.os.SystemClock
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
-import androidx.camera.core.impl.utils.MatrixExt.postRotate
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.ui.graphics.Matrix
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.keyboard.model.Emotion
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -22,15 +23,23 @@ import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-class CameraViewModel: ViewModel() {
+class EmotionDetectorViewModel : ViewModel() {
+
+    private val _detectedEmotion = MutableStateFlow(Emotion.NEUTRAL)
+    val detectedEmotion: StateFlow<Emotion> = _detectedEmotion.asStateFlow()
+
     private var cameraProvider: ProcessCameraProvider? = null
-    private var faceLandMarker: FaceLandmarker? = null
+    private var faceLandmarker: FaceLandmarker? = null
 
     private var backgroundExecutor = Executors.newSingleThreadExecutor()
+    private val emotionDetector = EmotionDetector()
 
     fun setupCamera(
         previewView: PreviewView,
@@ -38,14 +47,13 @@ class CameraViewModel: ViewModel() {
         lifecycleOwner: LifecycleOwner
     ) {
         viewModelScope.launch {
-            cameraProvider =
-                ProcessCameraProvider.getInstance(previewView.context).get()
+            cameraProvider = ProcessCameraProvider.getInstance(previewView.context).get()
 
             withContext(Dispatchers.IO) {
                 setupFaceLandmarker(overlayView)
             }
 
-            bindCamera(previewView,lifecycleOwner)
+            bindCamera(previewView, lifecycleOwner)
         }
     }
 
@@ -53,14 +61,14 @@ class CameraViewModel: ViewModel() {
         overlayView: OverlayView
     ) {
         try {
-            faceLandMarker?.close()
+            faceLandmarker?.close()
 
-            val baseOptionalBuilder = BaseOptions.builder()
+            val baseOptionBuilder = BaseOptions.builder()
                 .setDelegate(Delegate.GPU)
                 .setModelAssetPath("face_landmarker.task")
 
             val optionsBuilder = FaceLandmarker.FaceLandmarkerOptions.builder()
-                .setBaseOptions(baseOptionalBuilder.build())
+                .setBaseOptions(baseOptionBuilder.build())
                 .setMinFaceDetectionConfidence(0.5f)
                 .setMinTrackingConfidence(0.5f)
                 .setMinFacePresenceConfidence(0.5f)
@@ -72,9 +80,10 @@ class CameraViewModel: ViewModel() {
                 }
 
             val options = optionsBuilder.build()
-            faceLandMarker = FaceLandmarker.createFromOptions(
+            faceLandmarker = FaceLandmarker.createFromOptions(
                 overlayView.context, options
             )
+
         } catch (e: Exception) {
 
         }
@@ -124,7 +133,7 @@ class CameraViewModel: ViewModel() {
 
         val matrix = Matrix().apply {
             postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
-            postScale(-1f,1f,imageProxy.width.toFloat(),imageProxy.height.toFloat())
+            postScale(-1f, 1f, imageProxy.width.toFloat(), imageProxy.height.toFloat())
         }
 
         val rotatedBitmap = Bitmap.createBitmap(
@@ -132,7 +141,7 @@ class CameraViewModel: ViewModel() {
             matrix, true
         )
 
-        faceLandMarker?.detectAsync(BitmapImageBuilder(rotatedBitmap).build(),frameTime)
+        faceLandmarker?.detectAsync(BitmapImageBuilder(rotatedBitmap).build(), frameTime)
 
         imageProxy.close()
     }
@@ -148,6 +157,7 @@ class CameraViewModel: ViewModel() {
         }
 
         viewModelScope.launch {
+            _detectedEmotion.value = emotionDetector.detectAmotion(result)
             overlayView.setResults(result, input)
             overlayView.invalidate()
         }

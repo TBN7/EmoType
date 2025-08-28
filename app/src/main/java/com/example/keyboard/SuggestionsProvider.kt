@@ -2,11 +2,12 @@ package com.example.keyboard
 
 import com.example.keyboard.model.Emotion
 
-object SuggestionProvider {
+object SuggestionsProvider {
     private val emojiSuggestion = mapOf(
         Emotion.HAPPY to listOf("🙂", "😊", "😄", "😆", "🤩"),
         Emotion.SAD to listOf("🙁", "😟", "😢", "😫", "😭"),
-        Emotion.SURPRISED to listOf("😯", "😮", "😲", "🤯", "😱")
+        Emotion.SURPRISED to listOf("😯", "😮", "😲", "🤯", "😱"),
+        Emotion.ANGRY to listOf("😠", "😡", "🤬", "😤", "👿"),
     )
 
     fun getEmojiFromEmotion(emotion: Emotion): List<String> =

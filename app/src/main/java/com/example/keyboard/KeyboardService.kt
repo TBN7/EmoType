@@ -12,8 +12,10 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ServiceLifecycleDispatcher
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
@@ -21,11 +23,15 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.keyboard.emotiondetection.CameraLayout
+import com.example.keyboard.emotiondetection.EmotionDetectorViewModel
 import com.example.keyboard.model.Emotion
 import com.example.keyboard.model.Key
 import com.example.keyboard.model.KeyboardLanguageManager
 import com.example.keyboard.ui.theme.KeyboardLayout
 import com.example.keyboard.ui.theme.KeyboardTheme
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
 
 class KeyboardService : InputMethodService(),
     LifecycleOwner,
@@ -46,11 +52,17 @@ class KeyboardService : InputMethodService(),
 
     private lateinit var keyboardLanguageManager: KeyboardLanguageManager
 
+    private val emotionDetectorViewModel: EmotionDetectorViewModel by lazy {
+        ViewModelProvider(this)[EmotionDetectorViewModel::class]
+    }
+
     override fun onCreate() {
         dispatcher.onServicePreSuperOnCreate()
         super.onCreate()
         keyboardLanguageManager = KeyboardLanguageManager(this)
         savedStateRegistryController.performRestore(null)
+
+        updateSuggestions()
     }
 
     @CallSuper
@@ -73,7 +85,7 @@ class KeyboardService : InputMethodService(),
                         CameraLayout()
                         KeyboardLayout (
                             languageManager = keyboardLanguageManager,
-                            emojiSuggestions = SuggestionProvider.getEmojiFromEmotion(Emotion.HAPPY),
+                            emojiSuggestions = emojiSuggestions,
                             isShiftEnabled = isShiftEnabled,
                             onKeyPress = { key ->
                                 when(key) {
@@ -124,6 +136,16 @@ class KeyboardService : InputMethodService(),
     private fun handleEmojiSuggestionClick(emoji: String) {
         val inputConnection = currentInputConnection ?: return
         inputConnection.commitText(" $emoji", 1)
+    }
+
+    private fun updateSuggestions() {
+        lifecycleScope.launch {
+            emotionDetectorViewModel.detectedEmotion
+                .debounce(2000)
+                .collectLatest { emotion ->
+                    emojiSuggestions = SuggestionsProvider.getEmojiFromEmotion(emotion)
+                }
+        }
     }
 
 
