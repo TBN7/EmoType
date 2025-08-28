@@ -56,6 +56,13 @@ dependencies {
 
     implementation(libs.emoji.picker)
 
+    implementation(libs.bundles.camerax)
+    implementation(libs.bundles.lifecycle)
+
+    implementation(libs.google.guava)
+    implementation(libs.mlkit.face.detection)
+    implementation(libs.mediapie.vision)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
