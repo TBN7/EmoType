@@ -17,6 +17,8 @@ guava = "27.1-android"
 faceMesh = "16.0.0-beta3"
 mediapipeVision = "0.10.26"
 
+mediapipeGenAI = "0.10.27"
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -51,6 +53,7 @@ google-guava = { group = "com.google.guava", name = "guava", version.ref = "guav
 
 mlkit-face-detection = { group = "com.google.mlkit", name = "face-mesh-detection", version.ref = "faceMesh"}
 mediapie-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipeVision"}
+mediapipe-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipeGenAI"}
 
 
 [plugins]
