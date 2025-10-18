@@ -27,15 +27,21 @@ import com.example.keyboard.emotiondetection.EmotionDetectorViewModel
 import com.example.keyboard.model.Emotion
 import com.example.keyboard.model.Key
 import com.example.keyboard.model.KeyboardLanguageManager
+import com.example.keyboard.suggestions.SuggestionsProvider
 import com.example.keyboard.ui.theme.KeyboardLayout
 import com.example.keyboard.ui.theme.KeyboardTheme
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class KeyboardService : InputMethodService(),
     LifecycleOwner,
     SavedStateRegistryOwner, ViewModelStoreOwner {
+
     private val dispatcher = ServiceLifecycleDispatcher(this)
     override val lifecycle: Lifecycle = dispatcher.lifecycle
 
@@ -48,11 +54,15 @@ class KeyboardService : InputMethodService(),
         get() = store
 
     private var isShiftEnabled by mutableStateOf(false)
+    private var inputSuggestions by mutableStateOf(emptyList<String>())
     private var emojiSuggestions by mutableStateOf(emptyList<String>())
     private var currentInput by mutableStateOf("")
     private var currentEmotion by mutableStateOf(Emotion.NEUTRAL)
 
+    private val _currentInput = MutableStateFlow("")
+
     private lateinit var keyboardLanguageManager: KeyboardLanguageManager
+    private lateinit var suggestionsProvider: SuggestionsProvider
 
     private val emotionDetectorViewModel: EmotionDetectorViewModel by lazy {
         ViewModelProvider(this)[EmotionDetectorViewModel::class]
@@ -62,9 +72,15 @@ class KeyboardService : InputMethodService(),
         dispatcher.onServicePreSuperOnCreate()
         super.onCreate()
         keyboardLanguageManager = KeyboardLanguageManager(this)
+        suggestionsProvider = SuggestionsProvider(this)
         savedStateRegistryController.performRestore(null)
 
-        updateSuggestions()
+        lifecycleScope.launch {
+            suggestionsProvider.loadDictionary()
+        }
+
+        updateCurrentEmotion()
+        setupInputDebounce()
     }
 
     @CallSuper
@@ -85,10 +101,11 @@ class KeyboardService : InputMethodService(),
                 KeyboardTheme {
                     Column {
                         CameraLayout()
-                        KeyboardLayout (
+                        KeyboardLayout(
                             languageManager = keyboardLanguageManager,
                             currentInput = currentInput,
                             currentEmotion = currentEmotion,
+                            suggestions = inputSuggestions,
                             emojiSuggestions = emojiSuggestions,
                             isShiftEnabled = isShiftEnabled,
                             onKeyPress = { key ->
@@ -101,7 +118,7 @@ class KeyboardService : InputMethodService(),
                                 }
                             },
                             onEmojiClick = { emoji ->
-                                handleEmojiSuggestionClick(emoji)
+                                handleSuggestionClick(emoji)
                             },
                             onTextApply = { text ->
                                 handleTextApplied(text)
@@ -121,58 +138,83 @@ class KeyboardService : InputMethodService(),
         return composeView
     }
 
+    @OptIn(FlowPreview::class)
+    private fun setupInputDebounce() {
+        lifecycleScope.launch {
+            _currentInput
+                .debounce(1000)
+                .distinctUntilChanged()
+                .collect {
+                    updateEmojiSuggestions()
+                }
+        }
+    }
+
     private fun handleLetterKeyPress(letter: String) {
         val inputConnection = currentInputConnection ?: return
         inputConnection.commitText(letter, 1)
 
         currentInput += letter
-    }
-
-    private fun handleDelete() {
-        val inputConnection = currentInputConnection ?: return
-        inputConnection.deleteSurroundingTextInCodePoints(1,0)
-
-        if (currentInput.isNotEmpty()) {
-            currentInput = currentInput.dropLast(1)
-        }
+        _currentInput.value = currentInput
     }
 
     private fun handleShiftPress() {
         isShiftEnabled = !isShiftEnabled
     }
 
+    private fun handleDelete() {
+        val inputConnection = currentInputConnection ?: return
+        inputConnection.deleteSurroundingTextInCodePoints(1, 0)
+        if (currentInput.isNotEmpty()) {
+            currentInput = currentInput.dropLast(1)
+            _currentInput.value = currentInput
+        }
+    }
+
     private fun handleSpace() {
         val inputConnection = currentInputConnection ?: return
         inputConnection.commitText(" ", 1)
-
         currentInput += " "
+        _currentInput.value = currentInput
+
+        updateInputSuggestions()
     }
 
-    private fun handleEmojiSuggestionClick(emoji: String) {
+    private fun handleSuggestionClick(suggestion: String) {
         val inputConnection = currentInputConnection ?: return
-        inputConnection.commitText(" $emoji", 1)
-        currentInput += " $emoji"
+        inputConnection.commitText("$suggestion ", 1)
+        currentInput += "$suggestion "
+        _currentInput.value = currentInput
+
+        updateInputSuggestions()
     }
 
     private fun handleTextApplied(text: String) {
         val inputConnection = currentInputConnection ?: return
         if (currentInput.isNotEmpty()) {
-            inputConnection.deleteSurroundingTextInCodePoints(currentInput.length, 0)
+            inputConnection.deleteSurroundingText(currentInput.length, 0)
         }
 
         inputConnection.commitText(text, 1)
         currentInput = text
+        _currentInput.value = currentInput
     }
 
-    private fun updateSuggestions() {
+    private fun updateCurrentEmotion() {
         lifecycleScope.launch {
             emotionDetectorViewModel.detectedEmotion
                 .collectLatest { emotion ->
-                    emojiSuggestions = SuggestionsProvider.getEmojiFromEmotion(emotion)
                     currentEmotion = emotion
                 }
         }
     }
 
+    private fun updateEmojiSuggestions() {
+        emojiSuggestions = suggestionsProvider.getEmojiForEmotion(currentEmotion)
+    }
 
+    private fun updateInputSuggestions() {
+        val previousWord = currentInput.split(" ").last { it.isNotEmpty() }
+        inputSuggestions = suggestionsProvider.getSuggestions(previousWord)
+    }
 }

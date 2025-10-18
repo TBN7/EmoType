@@ -34,7 +34,7 @@ fun CameraLayout(
 
     Box(
         modifier = Modifier.fillMaxWidth()
-            .height(600.dp)
+            .height(400.dp)
     ) {
         AndroidView(
             factory = { context ->

@@ -59,6 +59,7 @@ fun KeyboardLayout(
     currentInput: String,
     currentEmotion: Emotion,
     emotionAssistViewModel: EmotionAssistViewModel = viewModel(),
+    suggestions: List<String>,
     emojiSuggestions: List<String>,
     isShiftEnabled: Boolean,
     onKeyPress: (Key) -> Unit,
@@ -82,9 +83,10 @@ fun KeyboardLayout(
     ) {
 
         if (currentLayoutType != KeyboardLayoutType.EmotionAssist) {
-            EmojisBar(
+            SuggestionsBar(
+                suggestions = suggestions,
                 emojis = emojiSuggestions,
-                onEmojiClick = onEmojiClick,
+                onSuggestionClick = onEmojiClick,
                 onEmotionAssistClick = {
                     currentLayoutType = KeyboardLayoutType.EmotionAssist
                 }
@@ -260,10 +262,11 @@ fun EmojiBottomRow (
 }
 
 @Composable
-fun EmojisBar (
+fun SuggestionsBar (
     modifier: Modifier = Modifier,
     emojis: List<String>,
-    onEmojiClick: (String) -> Unit,
+    suggestions: List<String>,
+    onSuggestionClick: (String) -> Unit,
     onEmotionAssistClick: () -> Unit
 ) {
     Row(
@@ -275,7 +278,7 @@ fun EmojisBar (
                 modifier = modifier
                     .size(48.dp)
                     .padding(8.dp),
-                onClick = { onEmojiClick(emoji) }
+                onClick = { onSuggestionClick(emoji) }
             ) {
                 Text(
                     text = emoji,
@@ -283,13 +286,34 @@ fun EmojisBar (
                 )
             }
         }
-        IconButton(
-            modifier = modifier
-                .size(48.dp)
-                .padding(8.dp),
-            onClick = onEmotionAssistClick
-        ) {
-            Image(painter = painterResource(R.drawable.magic_wand), "")
+//        IconButton(
+//            modifier = modifier
+//                .size(48.dp)
+//                .padding(8.dp),
+//            onClick = onEmotionAssistClick
+//        ) {
+//            Image(painter = painterResource(R.drawable.magic_wand), "")
+//        }
+    }
+
+    if (suggestions.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ){
+            suggestions.forEach { suggestion ->
+                Text(
+                    text = suggestion,
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(4.dp)
+                        .clickable {
+                            onSuggestionClick(suggestion)
+                        }
+                )
+            }
         }
     }
 }

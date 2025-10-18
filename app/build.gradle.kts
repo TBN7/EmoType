@@ -64,6 +64,8 @@ dependencies {
     implementation(libs.mediapie.vision)
     implementation(libs.mediapipe.genai)
 
+    implementation(libs.gson)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

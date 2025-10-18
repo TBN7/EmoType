@@ -19,6 +19,8 @@ mediapipeVision = "0.10.26"
 
 mediapipeGenAI = "0.10.27"
 
+gson = "2.10.1"
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -55,6 +57,7 @@ mlkit-face-detection = { group = "com.google.mlkit", name = "face-mesh-detection
 mediapie-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipeVision"}
 mediapipe-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipeGenAI"}
 
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
